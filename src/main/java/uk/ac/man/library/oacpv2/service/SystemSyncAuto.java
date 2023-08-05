@@ -134,7 +134,7 @@ public class SystemSyncAuto {
 							RestTemplate restTemplate = new RestTemplate();
 							HttpHeaders headers = new HttpHeaders();
 							headers.set("Accept", "application/json");
-							final String urlString = crossRefURL + "?query.title=" + URLEncoder.encode(title, StandardCharsets.UTF_8);
+							final String urlString = crossRefURL + "?query.title=" + URLEncoder.encode(title, StandardCharsets.UTF_8.name());
 							logger.info("urlString" + urlString);
 							refRes = restTemplate.getForObject(urlString, RefResponse.class);
 							logger.info("crossRef for pureID: " + publication.getPureId());
