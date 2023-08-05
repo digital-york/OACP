@@ -45,11 +45,13 @@ public class Oacpv2Application extends SpringBootServletInitializer {
 
 	@Autowired
 	private UserManagementRepository userRepository;
-	
-	
+
+	@Value("${useSSO}")
+	Boolean useSSO;
+
 	@Value("${casLoginUrl}")
 	String casLoginUrl;
-	
+
 	@Value("${casLogoutUrl}")
 	String casLogoutUrl;
 
@@ -61,67 +63,65 @@ public class Oacpv2Application extends SpringBootServletInitializer {
 	@RequestMapping("/")
 	public ModelAndView LoadAppplication(HttpServletRequest request) {
 		ModelAndView modelAndView = new ModelAndView();
-//		 Uncomment to work on local machine
-//		  HttpSession session = request.getSession(true);
-//		  
-//		  User user = new User();
-//		  user.setFullName("localUser");
-//		  user.setRole("Admin");
-//		  
-//		  session.setAttribute("user", user);
-//		  session.setAttribute("isValid", "yes"); 
-//		  modelAndView.addObject("user", user);
-//		  modelAndView.setViewName("pure/index");
-		
-//		// end Uncomment to work on local machine	
-		
-		
-//		 Start commenting here to work locally
-		if (request.getParameter("ticket") == null) {
-			// forward to CAS server for authentication
-			String redirectURL = casLoginUrl + "?service=" + getCurrentUrl(request);
-			
-			logger.info("bo ticket, redirect to login:" + redirectURL);
-			modelAndView.setViewName("redirect:" + redirectURL);
-			return modelAndView;
-		}
+		// Do not use SSO to work on local machine
+		if(!useSSO) {
+		  HttpSession session = request.getSession(true);
+		  
+		  User user = new User();
+		  user.setFullName("localUser");
+		  user.setRole("Admin");
+		  
+		  session.setAttribute("user", user);
+		  session.setAttribute("isValid", "yes"); 
+		  modelAndView.addObject("user", user);
+		  modelAndView.setViewName("pure/index");
 
-		try {
+		// Use SSO on test and prodcution serves 
+		} else {
 
-			AttributePrincipal principal = null;
-			Cas20ServiceTicketValidator sv = new Cas20ServiceTicketValidator(casLoginUrl);
-
-			Assertion a = sv.validate(request.getParameter("ticket"), getCurrentUrl(request));
-			principal = a.getPrincipal();
-			HttpSession session = request.getSession(true);
-			String userName = principal.getName();
-			logger.info("userName=" + userName);
-
-			User user = userRepository.findByUserName(userName);
-			if (user != null) {
+			if (request.getParameter("ticket") == null) {
+				// forward to CAS server for authentication
+				String redirectURL = casLoginUrl + "?service=" + getCurrentUrl(request);
 				
-				session.setAttribute("user", user);
-				session.setAttribute("isValid", "yes");
-				logger.info("OK logged in");
-				modelAndView.addObject("user", user);
-				modelAndView.setViewName("pure/index");
-			} else {
-				logger.error("no user founded");
-				modelAndView.addObject("error", "invalid authentication");
-				modelAndView.setViewName("error-pages/401");
+				logger.info("bo ticket, redirect to login:" + redirectURL);
+				modelAndView.setViewName("redirect:" + redirectURL);
+				return modelAndView;
+			}
+			try {
+				AttributePrincipal principal = null;
+				Cas20ServiceTicketValidator sv = new Cas20ServiceTicketValidator(casLoginUrl);
+
+				Assertion a = sv.validate(request.getParameter("ticket"), getCurrentUrl(request));
+				principal = a.getPrincipal();
+				HttpSession session = request.getSession(true);
+				String userName = principal.getName();
+				logger.info("userName=" + userName);
+
+				User user = userRepository.findByUserName(userName);
+				if (user != null) {
+					
+					session.setAttribute("user", user);
+					session.setAttribute("isValid", "yes");
+					logger.info("OK logged in");
+					modelAndView.addObject("user", user);
+					modelAndView.setViewName("pure/index");
+				} else {
+					logger.error("no user founded");
+					modelAndView.addObject("error", "invalid authentication");
+					modelAndView.setViewName("error-pages/401");
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+				logger.error("login error" + e);
+				modelAndView.setViewName("redirect:/");
 			}
 
-		} catch (Exception e) {
-			e.printStackTrace();
-			logger.error("login error" + e);
-			modelAndView.setViewName("redirect:/");
+		// use SSO 
 		}
-//	 End commenting here to work locally
  
 		return modelAndView;
 	}
-	
-	
+
 	@RequestMapping("/logout")
 	public String casLogout(HttpServletRequest request) {
 		HttpSession session = request.getSession();
@@ -136,8 +136,8 @@ public class Oacpv2Application extends SpringBootServletInitializer {
 						|| "https".equals(request.getScheme()) && request.getServerPort() == 443 ? ""
 								: ":" + request.getServerPort())
 				+ request.getRequestURI();
-		logger.info("getCurrentUrl="+ uri);
+		logger.info("getCurrentUrl=" + uri);
 		return uri;
 	}
-	
+
 }
