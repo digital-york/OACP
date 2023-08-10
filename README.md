@@ -61,6 +61,7 @@ In Linux/MacOS
 export DB_USER="postgres - e.g or other PostgreSQL Admin user as configured in Docker"
 export DB_PASSWORD="...."
 export SCHOLARLY_API_KEY="..."
+export PURE_URL="..."
 export PURE_API_KEY="..."
 export PURE_USER="..."
 export PURE_PASSWORD="..."
